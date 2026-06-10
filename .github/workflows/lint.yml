@@ -16,7 +16,7 @@ jobs:
       - name: Index freshness
         run: |
           uv run tools/build_index.py
-          git diff --exit-code wiki/index.md
+          git diff -I '^_Last rebuilt:' --exit-code wiki/index.md
       - name: Orphan check
         run: uv run tools/orphans.py
       - name: Backlink graph
