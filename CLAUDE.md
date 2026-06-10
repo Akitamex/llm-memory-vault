@@ -133,9 +133,13 @@ All tools are deterministic Python, stdlib + PEP 723 inline deps, anchored to th
 
 Run them with `uv run tools/<name>.py` (or plain `python3` if the script has no inline deps).
 
+**Why no LLM in the tools:** graph maintenance is bookkeeping, and bookkeeping must be reproducible, auditable, cheap, and fast. A deterministic script produces the same index from the same pages every time; a model does not. Keep judgment (reading, distilling, linking decisions) in the agent and mechanics in the scripts. Resist the urge to add "smart" merge or auto-fix tools: an unreviewable fix to the graph is worse than a reported problem.
+
 ## 9. Search policy
 
 Prefer indexed search over grep when a hybrid-search MCP (semantic + keyword over `wiki/`) is registered. Without one, fall back to ranked `grep`/`rg` over `wiki/` (titles and summaries first, bodies second). Either way: search the vault BEFORE answering from general knowledge, and follow wikilinks one hop from the best hits.
+
+If you wire a retrieval pipeline, a strong default for prompt assembly is: rules and corrections first, then the index, then retrieved pages, then conversation history. Position carries weight; material near the top wins conflicts. Treat the ordering as a starting default to test against your own setup, never as a shipped invariant: this template includes no retriever and makes no assembly promises.
 
 ## 10. Tone of pages
 
@@ -150,9 +154,20 @@ Write pages the owner's future self will thank: dense, sourced, free of filler. 
 - Duplicate a concept because the search missed an existing page: search aliases first.
 - Invent facts, citations, or source locations. A vault with one fabricated claim is worth less than no vault.
 
-## 12. Nightly automation (omitted on purpose)
+## 12. Running unattended (architecture only, implementation omitted on purpose)
 
-The pattern extends to scheduled ingestion: a cron or launchd job that drops new material into `raw/` and runs the ingest workflow headlessly. This template omits any implementation: scheduled jobs are personal infrastructure (credentials, paths, cadence) that each owner should build for their own machine. The contract stays identical: automation writes through the same tools and the same commit prefixes, or it does not write at all.
+The pattern extends to scheduled ingestion: a job that drops new material into `raw/` and runs the ingest workflow headlessly. This template ships no implementation: scheduled jobs are personal infrastructure (credentials, paths, cadence) that each owner builds for their own machine. The contract stays identical: automation writes through the same tools and the same commit prefixes, or it does not write at all.
+
+If you build one, the shape that holds up is two separate stages:
+
+- **Stage 1, collect:** deterministic, no LLM, cheap. Syncs new material into `raw/` from wherever you accumulate it. Safe to run hourly.
+- **Stage 2, ingest:** LLM-driven, expensive. Processes a queue with content-hash (SHA-256) deduplication so the same file never ingests twice, and a committed state ledger so "has this been processed, and when?" always has an answer. Budget-gate it: a nightly cap means a large backlog drains slowly by design; clear backlogs in a manual session first.
+
+Platform pitfall worth an evening of your life: on macOS, launchd jobs that touch `~/Desktop` or `~/Documents` fail silently with exit code 78 (TCC permissions). Keep the vault and the job's logs outside those folders, or grant Full Disk Access deliberately. Label any plist clearly (for example `com.example.vault-nightly`).
+
+### 12a. The corrections pattern (described, not shipped)
+
+When the vault starts answering wrong and you want to fix it fast, do NOT patch wiki pages from a single bad answer: one hasty correction written into a page poisons every later answer that cites it. The durable pattern: keep a scratch file (for example `_system/corrections.md`) that the agent reads before answering any query; corrections land there instantly and cheaply. Periodically, during `lint`, promote entries that proved stable into proper wiki edits, and delete the rest. The scratch layer gives you a fast patch today; the wiki only absorbs what survived scrutiny. This template ships no tooling for it on purpose: wire it when you first feel the pain, the append-only design already accommodates it.
 
 ## 13. When in doubt
 

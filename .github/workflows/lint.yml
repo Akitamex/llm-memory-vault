@@ -1,0 +1,23 @@
+name: Wiki lint
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Index freshness
+        run: |
+          uv run tools/build_index.py
+          git diff --exit-code wiki/index.md
+      - name: Orphan check
+        run: uv run tools/orphans.py
+      - name: Backlink graph
+        run: uv run tools/backlinks.py
