@@ -1,0 +1,12 @@
+.env
+.env.*
+*.env
+settings.local.json
+*.rtf
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+venv/
+.venv/
+example/signups.csv
